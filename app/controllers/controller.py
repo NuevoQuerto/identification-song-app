@@ -77,6 +77,6 @@ def upload_audio():
             # Cari lagu berdasarkan lirik yang didapat dari hasil max_confidence_transcript
             for song in Song.query.filter(Song.lyrics.match(max_confidence_transcript["transcript"])).limit(10).all():
                 logging.error(song)
-                songs.append({"artist": song.artist, "lyrics": song.title}) # Masukkan data lagu
+                songs.append({"artist": song.artist, "title": song.title}) # Masukkan data lagu
     
     return render_template("ResultPage.html", songs=songs), 200 # Tampilkan hasil
