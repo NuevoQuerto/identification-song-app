@@ -1,14 +1,13 @@
-from flask import Flask, request, render_template
+from flask import request, render_template
+from app import app
 from werkzeug.utils import secure_filename
-import settings # Reading Environment Variables
 import os
 import logging
 import json
 from pydub import AudioSegment # Manipulate Audio
 from ibm_watson import SpeechToTextV1 # Audio to Text
 from ibm_cloud_sdk_core.authenticators import IAMAuthenticator # AUTH
-
-app = Flask(__name__)
+from app.models.song import Song
 
 @app.route("/")
 def index():
@@ -36,20 +35,27 @@ def upload_audio():
     if audio.content_type not in allowed_mimes:
         return "File Harus {0}".format(",".join(allowed_mimes)), 400
         
-    # Cek Durasi
-    filename = secure_filename(audio.filename)
-    audio.save(os.path.join(settings.UPLOAD_FOLDER, filename)) # Simpan audio file ke folder uploads
-    song = AudioSegment.from_file("{0}/{1}".format(settings.UPLOAD_FOLDER, filename), format=audio.content_type.split("/",1)[1])
-    song_duration_in_seconds = len(song) / 1000
-    if int(song_duration_in_seconds) > 15:
-        os.remove(os.path.join(settings.UPLOAD_FOLDER, filename)) # Hapus file
-        return "Durasi maksimal audio adalah 15 detik", 400
-    louder_song = song.normalize()
-    louder_song.export("{0}/louder-{1}".format(settings.UPLOAD_FOLDER, filename), format=audio.content_type.split("/",1)[1])
-        
     # Cek Bahasa
     if language not in allowed_language_models:
-        return "Maaf Bahasa Tidak Disupport", 400
+        return "Maaf Bahasa Tidak Disupport", 400    
+    
+    return Song.query.filter_by(artist="hello").first()
+    # Save audio file
+    filename = secure_filename(audio.filename)
+    save_path = os.path.join(settings.UPLOAD_FOLDER, filename) # Simpan audio file ke folder uploads
+    audio.save(save_path)
+    
+    # Manipulate audio
+    song = AudioSegment.from_file(save_path, format=audio.content_type.split("/",1)[1])
+    song_duration_in_seconds = len(song) / 1000
+    # Cek durasi audio
+    if int(song_duration_in_seconds) > 15:
+        os.remove(save_path) # Hapus audio file
+        return "Durasi maksimal audio adalah 15 detik", 400
+    # Normalize audio volume
+    save_path = os.path.join(settings.UPLOAD_FOLDER, "normalize-" + filename)
+    normalizing_song = song.normalize()
+    normalizing_song.export(save_path, format=audio.content_type.split("/",1)[1])
         
     # Mengirim file audio ke IBM Speech to Text API
     # Authentication
@@ -59,14 +65,18 @@ def upload_audio():
     )
     speech_to_text.set_service_url(settings.WATSON_SERVICE_URL)
     # Sending/Recognizing
-    with open("{0}/louder-{1}".format(settings.UPLOAD_FOLDER, filename), "rb") as audio_file:
+    with open(save_path, "rb") as audio_file:
         speech_recognition_results = speech_to_text.recognize(
             audio=audio_file,
             content_type=audio.content_type,
             model=language
         ).get_result()
         logging.error(json.dumps(speech_recognition_results, indent=2))
-        return speech_recognition_results
+        
+        if len(speech_recognition_results["results"]) > 0:
+            return speech_recognition_results["results"][0]["alternatives"][0]["transcript"]
+        else:
+            return "Kosong"
     
     
     return render_template("ResultPage.html", songs=data), 200

@@ -1,8 +1,6 @@
-# created by virtualenv automatically
-.gitignore
 __pycache__
-Lib
-Scripts
-share
+/app/__pycache__
+/app/controllers/__pycache__
+/app/uploads/__pycache__
+venv
 .env
-pyvenv.cfg
