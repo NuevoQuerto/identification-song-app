@@ -1,5 +1,5 @@
 from flask import request, render_template
-from app import app
+from app import app, settings
 from werkzeug.utils import secure_filename
 import os
 import logging
@@ -39,7 +39,6 @@ def upload_audio():
     if language not in allowed_language_models:
         return "Maaf Bahasa Tidak Disupport", 400    
     
-    return Song.query.filter_by(artist="hello").first()
     # Save audio file
     filename = secure_filename(audio.filename)
     save_path = os.path.join(settings.UPLOAD_FOLDER, filename) # Simpan audio file ke folder uploads
@@ -74,6 +73,7 @@ def upload_audio():
         logging.error(json.dumps(speech_recognition_results, indent=2))
         
         if len(speech_recognition_results["results"]) > 0:
+            logging.error(Song.query.filter_by(artist="hello").first())
             return speech_recognition_results["results"][0]["alternatives"][0]["transcript"]
         else:
             return "Kosong"

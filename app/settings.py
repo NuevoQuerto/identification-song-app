@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER")
+UPLOAD_FOLDER = os.path.abspath(os.getenv("UPLOAD_FOLDER"))
 WATSON_API_KEY = os.getenv("WATSON_API_KEY")
 WATSON_SERVICE_URL = os.getenv("WATSON_SERVICE_URL")
 SQLALCHEMY_DATABASE_URI = os.getenv("SQLALCHEMY_DATABASE_URI")
