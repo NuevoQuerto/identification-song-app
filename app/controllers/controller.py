@@ -15,20 +15,11 @@ def index():
     
 @app.route("/songs", methods=["POST"])
 def upload_audio():
-    data = [
-        {
-            "artist": "a",
-            "lyrics": "sdasadsda"
-        },
-        {
-            "artist": "b",
-            "lyrics": "sdasadsda"
-        }
-    ]
     audio = request.files["audio"]
     language = request.form["language"]
     allowed_mimes = ["audio/mp3", "audio/mpeg", "audio/ogg", "audio/wav"]
     allowed_language_models = ["en-US_BroadbandModel"]
+    songs = [] # Data JSON untuk ditampilkan
     
     # Cek MIME Type
     #return audio.content_type.split("/",1)[1]
@@ -68,15 +59,24 @@ def upload_audio():
         speech_recognition_results = speech_to_text.recognize(
             audio=audio_file,
             content_type=audio.content_type,
-            model=language
+            model=language,
+            speech_detector_sensitivity=0.5,
+            background_audio_suppression=0.5,
+            smart_formatting=True,
+            profanity_filter=False
         ).get_result()
         logging.error(json.dumps(speech_recognition_results, indent=2))
         
+        # Cek apakah mendapatkan hasil transkrip
         if len(speech_recognition_results["results"]) > 0:
-            logging.error(Song.query.filter_by(artist="hello").first())
-            return speech_recognition_results["results"][0]["alternatives"][0]["transcript"]
-        else:
-            return "Kosong"
+            # Simpan transkrip audio
+            transcripts = {"data": []}
+            for transcript in speech_recognition_results["results"]:
+                transcripts["data"].append(transcript["alternatives"][0])
+            max_confidence_transcript = max(transcripts["data"], key=lambda x:x["confidence"]) # Ambil transkrip audio dengan nilai confidence tertinggi
+            # Cari lagu berdasarkan lirik yang didapat dari hasil max_confidence_transcript
+            for song in Song.query.filter(Song.lyrics.match(max_confidence_transcript["transcript"])).limit(10).all():
+                logging.error(song)
+                songs.append({"artist": song.artist, "lyrics": song.title}) # Masukkan data lagu
     
-    
-    return render_template("ResultPage.html", songs=data), 200
+    return render_template("ResultPage.html", songs=songs), 200 # Tampilkan hasil
