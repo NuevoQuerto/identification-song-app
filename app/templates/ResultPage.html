@@ -1,3 +1,9 @@
-{% for song in songs %}
-<p>{{ song.artist }} - {{ song.title }}</p>
-{% endfor %}
+{% if songs|length > 0 %}
+	<ul class="list-group list-group-flush">
+	{% for song in songs %}
+		<li class="list-group-item">{{loop.index}}. {{ song.artist }} - {{ song.releases }} - {{ song.title }}</li>
+	{% endfor %}
+	</ul>
+{% else %}
+	<p>Maaf Tidak Ada Hasil</p>
+{% endif %}
